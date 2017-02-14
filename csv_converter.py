@@ -4,7 +4,7 @@ import os
 import re
 import time, datetime
 import threading
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 
 app = QtWidgets.QApplication(sys.argv)
 main_layout = QtWidgets.QVBoxLayout()
@@ -113,7 +113,8 @@ step4.setSpacing(10)
 
 step4_title = QtWidgets.QLabel("<b><font size=4>Step 4.</font></b>  Input filename and click \"Generate\"")
 step4.addWidget(step4_title, 1, 0)
-path = (os.path.abspath(os.curdir) + "\\generated_" + time.strftime("%Y-%m-%d_%H_%M_%S") + ".csv").replace("\\\\", "\\")
+
+path = (os.path.abspath(os.curdir) + "\\generated_" + time.strftime("%Y-%m-%d.%H_%M_%S") + ".csv").replace("\\\\", "\\")
 new_file = QtWidgets.QLineEdit(path)
 step4.addWidget(new_file, 2, 0, 1, 2)
 
@@ -138,16 +139,15 @@ time_label = QtWidgets.QLabel("Generating time: is not calculated")
 step4.addWidget(time_label, 5, 0)
 
 elapsed_time = QtWidgets.QLabel("")
+elapsed_time.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 step4.addWidget(elapsed_time, 6, 0, 1, 2)
 
 progress_bar = QtWidgets.QProgressBar()
 step4.addWidget(progress_bar, 7, 0, 1, 2)
 
 
-def generate(time_label, elapsed_time, generate_button, header, list1, list2, parameters1, parameters2, filename,
-             progress_bar, w):
-    def write_csv_tread(time_label, elapsed_time, generate_button, header, list1, list2, parameters1, parameters2,
-                        filename, progress_bar):
+def generate():
+    def write_csv_tread():
         try:
             start_time = datetime.datetime.now()
 
@@ -172,6 +172,7 @@ def generate(time_label, elapsed_time, generate_button, header, list1, list2, pa
             if filename.text() == "Select file by click on <b>\"Browse...\"</b>" or filename.text() == "":
                 time_label.setText("Select file for parsing")
                 generate_button.setEnabled(True)
+                elapsed_time.setText("")
                 return
             else:
                 lines_count = sum(1 for line in open(filename.text()))
@@ -186,6 +187,7 @@ def generate(time_label, elapsed_time, generate_button, header, list1, list2, pa
             counter = 0
             if index1 is None and index2 is None:
                 time_label.setText("Generating FAILED: select at least one filter")
+                elapsed_time.setText("")
             elif index1 is None:
                 with open(new_file.text(), "wb") as new_csv_file:#python3 - "w", newline=''
                     new_csv = csv.writer(new_csv_file)
@@ -201,6 +203,7 @@ def generate(time_label, elapsed_time, generate_button, header, list1, list2, pa
                             counter += 1
                 time_label.setText(
                     "Generating time: " + str((datetime.datetime.now() - start_time).seconds) + " seconds")
+                elapsed_time.setText("Generated: <b>" + new_file.text() + "</b>")
             elif index2 is None:
                 with open(new_file.text(), "wb") as new_csv_file:#python3 - "w", newline=''
                     new_csv = csv.writer(new_csv_file)
@@ -216,6 +219,7 @@ def generate(time_label, elapsed_time, generate_button, header, list1, list2, pa
                             counter += 1
                 time_label.setText(
                     "Generating time: " + str((datetime.datetime.now() - start_time).seconds) + " seconds")
+                elapsed_time.setText("Generated: <b>" + new_file.text() + "</b>")
             else:
                 with open(new_file.text(), "wb") as new_csv_file:#python3 - "w", newline=''
                     new_csv = csv.writer(new_csv_file)
@@ -233,8 +237,10 @@ def generate(time_label, elapsed_time, generate_button, header, list1, list2, pa
                             counter += 1
                 time_label.setText(
                     "Generating time: " + str((datetime.datetime.now() - start_time).seconds) + " seconds")
+                elapsed_time.setText("Generated: <b>" + new_file.text() + "</b>")
 
-            elapsed_time.setText("")
+            temp_path = new_file.text()[::-1].split("\\", 1)[-1][::-1]
+            new_file.setText(temp_path + "\\generated_" + time.strftime("%Y-%m-%d.%H_%M_%S") + ".csv")
             progress_bar.setValue(100)
             generate_button.setEnabled(True)
             w.repaint()
@@ -246,16 +252,12 @@ def generate(time_label, elapsed_time, generate_button, header, list1, list2, pa
             elapsed_time.setText("")
             return
 
-    thread = threading.Thread(target=write_csv_tread, args=(
-        time_label, elapsed_time, generate_button, header, list1, list2, parameters1, parameters2, filename,
-        progress_bar))
+    thread = threading.Thread(target=write_csv_tread, args=())
     thread.start()
     #TODO fix: appication is failed if only start thread without join(). It isn't freezed but an error appears sometimes after file writing
     thread.join()
 
-generate_button.clicked.connect(
-    lambda: generate(time_label, elapsed_time, generate_button, header, list1, list2, parameters1, parameters2,
-                     filename, progress_bar, w))
+generate_button.clicked.connect(lambda: generate())
 
 ### Main ###
 main_layout.addStretch(1)
