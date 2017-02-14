@@ -175,7 +175,7 @@ def generate():
                 elapsed_time.setText("")
                 return
             else:
-                lines_count = sum(1 for line in open(filename.text()))
+                lines_count = sum(1 for line in open(filename.text(),"r"))
 
             def show_progress(counter, lines_count, start_time, progress_bar, elapsed_time):
                 current_progress = round(float(counter) / lines_count,2) * 100
@@ -212,7 +212,8 @@ def generate():
                     with open(filename.text(), 'rb') as old_csv_file:#python3 - "r"
                         old_csv = csv.reader(old_csv_file)
                         for row in old_csv:
-                            if (row[index1].lower() in values1) or (row[index1] in values1) or (row[index1].replace(".", "_") in values1):
+                            if (row[index1].lower() in values1) or (row[index1] in values1) \
+                                    or (row[index1].replace(".", "_") in values1):
                                 new_csv.writerow(row)
                             if counter % 100000 == 10:
                                 show_progress(counter, lines_count, start_time, progress_bar, elapsed_time)
@@ -253,9 +254,7 @@ def generate():
             return
 
     thread = threading.Thread(target=write_csv_tread, args=())
-    thread.start()
-    #TODO fix: appication is failed if only start thread without join(). It isn't freezed but an error appears sometimes after file writing
-    thread.join()
+    thread.run()
 
 generate_button.clicked.connect(lambda: generate())
 
