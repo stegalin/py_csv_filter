@@ -20,7 +20,7 @@ step1_title = QtWidgets.QLabel("<b><font size=4>Step 1.</font></b> Select file f
 step1.addWidget(step1_title, 1, 0)
 step1.addWidget(QtWidgets.QLabel("File for parsing:"), 2, 0)
 
-filename = QtWidgets.QLabel("Select file by click on <b>\"Browse...\"</b>", w)
+filename = QtWidgets.QLabel("Select file by click on <b>\"Browse...\"</b>")
 step1.addWidget(filename, 3, 0, 1, 2)
 
 browse_button = QtWidgets.QPushButton("Browse...")
@@ -64,8 +64,11 @@ def get_fields(filename, fields_label, header, list1, list2):
     else:
         if filename.text().endswith(".csv"):
             header.clear()
-            with open(filename.text(), 'r') as f:
-                headers = csv.DictReader(f).fieldnames
+            with open(filename.text(), 'rb') as file:#python3 - "r"
+                headers = csv.DictReader(file).fieldnames
+            if headers is None:
+                fields_label.setText("<b>Missing lines in selected file</b>")
+                return
             header.addItems(headers)
             list1.clear()
             list1.addItems(["empty"] + headers)
@@ -163,18 +166,15 @@ def generate(time_label, elapsed_time, generate_button, header, list1, list2, pa
             except ValueError:
                 index2 = None
 
-            lines_count = 0
-            if filename.text() == "Select file by click on \"Browse...\"" or filename.text() == "":
-                time_label.setText("Select file for parsing")
-                return
-            else:
-                with open(filename.text()) as f:
-                    for i, l in enumerate(f):
-                        pass
-                lines_count = i + 1
-
             time_label.setText("Generating is running")
             generate_button.setEnabled(False)
+
+            if filename.text() == "Select file by click on <b>\"Browse...\"</b>" or filename.text() == "":
+                time_label.setText("Select file for parsing")
+                generate_button.setEnabled(True)
+                return
+            else:
+                lines_count = sum(1 for line in open(filename.text()))
 
             def show_progress(counter, lines_count, start_time, progress_bar, elapsed_time):
                 current_progress = round(float(counter) / lines_count,2) * 100
@@ -183,47 +183,45 @@ def generate(time_label, elapsed_time, generate_button, header, list1, list2, pa
                     elapsed_time.setText("Elapsed generating time: " + str((datetime.datetime.now() - start_time).seconds)
                                          + " from " + str(int((datetime.datetime.now() - start_time).seconds / current_progress * 100)) + " seconds")
 
-
             counter = 0
             if index1 is None and index2 is None:
                 time_label.setText("Generating FAILED: select at least one filter")
             elif index1 is None:
-                with open(new_file.text(), "wb") as new_csv_file:
+                with open(new_file.text(), "wb") as new_csv_file:#python3 - "w", newline=''
                     new_csv = csv.writer(new_csv_file)
                     new_csv.writerow(header_items)
 
-                    with open(filename.text(), 'rb') as old_csv_file:
+                    with open(filename.text(), 'rb') as old_csv_file:#python3 - "r"
                         old_csv = csv.reader(old_csv_file)
                         for row in old_csv:
                             if (row[index2].lower() in values2) or (row[index2] in values2):
                                 new_csv.writerow(row)
                             if counter % 100000 == 10:
                                 show_progress(counter, lines_count, start_time, progress_bar, elapsed_time)
-                            counter = counter + 1
+                            counter += 1
                 time_label.setText(
                     "Generating time: " + str((datetime.datetime.now() - start_time).seconds) + " seconds")
             elif index2 is None:
-                with open(new_file.text(), "wb") as new_csv_file:
+                with open(new_file.text(), "wb") as new_csv_file:#python3 - "w", newline=''
                     new_csv = csv.writer(new_csv_file)
                     new_csv.writerow(header_items)
 
-                    with open(filename.text(), 'r') as old_csv_file:
+                    with open(filename.text(), 'rb') as old_csv_file:#python3 - "r"
                         old_csv = csv.reader(old_csv_file)
                         for row in old_csv:
-                            if (row[index1].lower() in values1) or (row[index1] in values1) or (
-                                row[index1].replace(".", "_") in values1):
+                            if (row[index1].lower() in values1) or (row[index1] in values1) or (row[index1].replace(".", "_") in values1):
                                 new_csv.writerow(row)
                             if counter % 100000 == 10:
                                 show_progress(counter, lines_count, start_time, progress_bar, elapsed_time)
-                            counter = counter + 1
+                            counter += 1
                 time_label.setText(
                     "Generating time: " + str((datetime.datetime.now() - start_time).seconds) + " seconds")
             else:
-                with open(new_file.text(), "wb") as new_csv_file:
+                with open(new_file.text(), "wb") as new_csv_file:#python3 - "w", newline=''
                     new_csv = csv.writer(new_csv_file)
                     new_csv.writerow(header_items)
 
-                    with open(filename.text(), 'r') as old_csv_file:
+                    with open(filename.text(), 'rb') as old_csv_file:#python3 - "r"
                         old_csv = csv.reader(old_csv_file)
                         for row in old_csv:
                             if ((row[index1].lower() in values1) or (row[index1] in values1) or (
@@ -232,25 +230,28 @@ def generate(time_label, elapsed_time, generate_button, header, list1, list2, pa
                                 new_csv.writerow(row)
                             if counter % 100000 == 10:
                                 show_progress(counter, lines_count, start_time, progress_bar, elapsed_time)
-                            counter = counter + 1
+                            counter += 1
                 time_label.setText(
                     "Generating time: " + str((datetime.datetime.now() - start_time).seconds) + " seconds")
 
             elapsed_time.setText("")
-            generate_button.setEnabled(True)
             progress_bar.setValue(100)
+            generate_button.setEnabled(True)
             w.repaint()
+            return
         except Exception as err:
-            print err
+            print(err)
             time_label.setText("Generating time: Generating FAILED")
             generate_button.setEnabled(True)
             elapsed_time.setText("")
+            return
 
     thread = threading.Thread(target=write_csv_tread, args=(
         time_label, elapsed_time, generate_button, header, list1, list2, parameters1, parameters2, filename,
         progress_bar))
     thread.start()
-
+    #TODO fix: appication is failed if only start thread without join(). It isn't freezed but an error appears sometimes after file writing
+    thread.join()
 
 generate_button.clicked.connect(
     lambda: generate(time_label, elapsed_time, generate_button, header, list1, list2, parameters1, parameters2,

@@ -12,3 +12,6 @@
 
 .idea
 *.csv
+build
+dist
+*.spec
