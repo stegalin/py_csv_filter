@@ -62,7 +62,7 @@ def get_fields(filename, fields_label, header, list1, list2):
         list1.clear()
         list2.clear()
     else:
-        if filename.text().endswith(".csv"):
+        if filename.text().lower().endswith(".csv"):
             header.clear()
             with open(filename.text(), 'rb') as file:#python3 - "r"
                 headers = csv.DictReader(file).fieldnames
